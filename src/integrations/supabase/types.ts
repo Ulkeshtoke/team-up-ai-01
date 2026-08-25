@@ -14,7 +14,177 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      matches: {
+        Row: {
+          breakdown: Json
+          created_at: string
+          explanation: string
+          id: string
+          profile_id: string
+          project_id: string
+          score: number
+        }
+        Insert: {
+          breakdown?: Json
+          created_at?: string
+          explanation?: string
+          id?: string
+          profile_id: string
+          project_id: string
+          score?: number
+        }
+        Update: {
+          breakdown?: Json
+          created_at?: string
+          explanation?: string
+          id?: string
+          profile_id?: string
+          project_id?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matches_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          availability: string
+          bio: string
+          created_at: string
+          experience: string
+          full_name: string
+          hours_per_week: number
+          id: string
+          interests: string[]
+          is_demo: boolean
+          skills: string[]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          availability?: string
+          bio?: string
+          created_at?: string
+          experience?: string
+          full_name?: string
+          hours_per_week?: number
+          id?: string
+          interests?: string[]
+          is_demo?: boolean
+          skills?: string[]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          availability?: string
+          bio?: string
+          created_at?: string
+          experience?: string
+          full_name?: string
+          hours_per_week?: number
+          id?: string
+          interests?: string[]
+          is_demo?: boolean
+          skills?: string[]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      project_members: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          project_id: string
+          role: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          project_id: string
+          role?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          project_id?: string
+          role?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          name: string
+          owner_id: string
+          preferred_availability: string
+          preferred_interests: string[]
+          required_skills: string[]
+          team_size: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name: string
+          owner_id: string
+          preferred_availability?: string
+          preferred_interests?: string[]
+          required_skills?: string[]
+          team_size?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          preferred_availability?: string
+          preferred_interests?: string[]
+          required_skills?: string[]
+          team_size?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
