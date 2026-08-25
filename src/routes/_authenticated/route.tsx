@@ -5,9 +5,18 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+    // Check cached/in-memory session first to prevent premature bounce-back during login transitions
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData.session?.user) {
+      return { user: sessionData.session.user };
+    }
+
+    // Fall back to getUser network validation
+    const { data: userData, error } = await supabase.auth.getUser();
+    if (error || !userData.user) {
+      throw redirect({ to: "/auth" });
+    }
+    return { user: userData.user };
   },
   component: () => <Outlet />,
 });

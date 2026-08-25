@@ -1,0 +1,6 @@
+{
+  "name": "ProjectMatch",
+  "description": "AI-powered matchmaking and team-up platform for projects and developers",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

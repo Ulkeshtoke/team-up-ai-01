@@ -4,16 +4,16 @@ AI-assisted team formation for students. Goal: a polished, demo-safe MVP buildab
 
 ## 1. Screens
 
-| Screen | Route | Purpose |
-| --- | --- | --- |
-| Landing | `/` | Value prop, sign in / sign up CTA |
-| Auth | `/auth` | Email + password (Lovable Cloud auth) |
-| My Profile | `/profile` | Create/edit skills, interests, experience, availability |
-| Projects | `/projects` | List of my projects + "New project" |
-| New Project | `/projects/new` | Name, description, required skills, team size, preferred availability |
-| Project Detail / Matches | `/projects/:id` | Ranked candidate list, score breakdown, explanation, invite |
-| Team | `/projects/:id` (Team tab) | Current members, open roles, remove member |
-| Discover (optional) | `/discover` | Browse all student profiles with filters |
+| Screen                   | Route                      | Purpose                                                               |
+| ------------------------ | -------------------------- | --------------------------------------------------------------------- |
+| Landing                  | `/`                        | Value prop, sign in / sign up CTA                                     |
+| Auth                     | `/auth`                    | Email + password (Lovable Cloud auth)                                 |
+| My Profile               | `/profile`                 | Create/edit skills, interests, experience, availability               |
+| Projects                 | `/projects`                | List of my projects + "New project"                                   |
+| New Project              | `/projects/new`            | Name, description, required skills, team size, preferred availability |
+| Project Detail / Matches | `/projects/:id`            | Ranked candidate list, score breakdown, explanation, invite           |
+| Team                     | `/projects/:id` (Team tab) | Current members, open roles, remove member                            |
+| Discover (optional)      | `/discover`                | Browse all student profiles with filters                              |
 
 Only 6 essential screens. No chat, feeds, payments, or admin.
 
@@ -36,12 +36,12 @@ profiles (1) ──< project (owner) >── project_members >── profiles
 profiles ──< profile_skills            projects ──< project_required_skills
 ```
 
-| Table | Key columns |
-| --- | --- |
-| `profiles` | `id` (= auth user), `full_name`, `bio`, `experience` (text), `availability` (enum: low/medium/high), `hours_per_week` (int), `skills` (text[]), `interests` (text[]) |
-| `projects` | `id`, `owner_id`, `name`, `description`, `category` (hackathon/research/startup/course), `required_skills` (text[]), `preferred_interests` (text[]), `team_size` (int), `preferred_availability` (enum), `created_at` |
-| `project_members` | `id`, `project_id`, `profile_id`, `role`, `status` (invited/accepted), unique(project_id, profile_id) |
-| `matches` (cache) | `id`, `project_id`, `profile_id`, `score`, `breakdown` (jsonb), `explanation` (text), `created_at` |
+| Table             | Key columns                                                                                                                                                                                                           |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profiles`        | `id` (= auth user), `full_name`, `bio`, `experience` (text), `availability` (enum: low/medium/high), `hours_per_week` (int), `skills` (text[]), `interests` (text[])                                                  |
+| `projects`        | `id`, `owner_id`, `name`, `description`, `category` (hackathon/research/startup/course), `required_skills` (text[]), `preferred_interests` (text[]), `team_size` (int), `preferred_availability` (enum), `created_at` |
+| `project_members` | `id`, `project_id`, `profile_id`, `role`, `status` (invited/accepted), unique(project_id, profile_id)                                                                                                                 |
+| `matches` (cache) | `id`, `project_id`, `profile_id`, `score`, `breakdown` (jsonb), `explanation` (text), `created_at`                                                                                                                    |
 
 Arrays (`text[]`) instead of join tables keeps the MVP small; still filterable with `overlaps`.
 
@@ -51,13 +51,13 @@ RLS: everyone authenticated can read `profiles` (discovery requires it) but only
 
 Deterministic, computed in a server function (fast, explainable, no API dependency).
 
-| Component | Weight | Rule |
-| --- | --- | --- |
-| Skill match | 45 | `|required ∩ student skills| / |required|` |
-| Availability fit | 20 | exact match = 1.0, one level off = 0.5, two off = 0.1 |
-| Experience relevance | 20 | keyword overlap between project description/skills and experience text, capped |
-| Interest alignment | 10 | `|preferred interests ∩ student interests| / |preferred|` (1.0 if none specified) |
-| Complementarity bonus | 5 | student covers a required skill no current team member has |
+| Component             | Weight | Rule                                                                           |
+| --------------------- | ------ | ------------------------------------------------------------------------------ |
+| Skill match           | 45     | `                                                                              | required ∩ student skills               | /   | required  | `                         |
+| Availability fit      | 20     | exact match = 1.0, one level off = 0.5, two off = 0.1                          |
+| Experience relevance  | 20     | keyword overlap between project description/skills and experience text, capped |
+| Interest alignment    | 10     | `                                                                              | preferred interests ∩ student interests | /   | preferred | ` (1.0 if none specified) |
+| Complementarity bonus | 5      | student covers a required skill no current team member has                     |
 
 `score = round(Σ weight × component)` → 0–100. Ties broken by skill match, then availability.
 
@@ -65,13 +65,13 @@ Rank all candidates, exclude the owner and existing members, return top 10 with 
 
 ## 5. AI vs deterministic
 
-| Task | Approach | Why |
-| --- | --- | --- |
-| Compatibility score | Deterministic | Reproducible, instant, defensible in a demo |
-| Ranking / filtering | Deterministic | No latency or rate-limit risk |
-| Skill extraction from a free-text project description | AI (one call at project creation, editable by user) | Turns prose into a normalized skill list |
-| Match explanation ("why this student") | AI (batched, one call for top candidates) | Natural, persuasive copy on top of the numeric breakdown |
-| Skill name normalization (`reactjs` → `React`) | Deterministic alias map + AI fallback | Keeps overlap math honest |
+| Task                                                  | Approach                                            | Why                                                      |
+| ----------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------- |
+| Compatibility score                                   | Deterministic                                       | Reproducible, instant, defensible in a demo              |
+| Ranking / filtering                                   | Deterministic                                       | No latency or rate-limit risk                            |
+| Skill extraction from a free-text project description | AI (one call at project creation, editable by user) | Turns prose into a normalized skill list                 |
+| Match explanation ("why this student")                | AI (batched, one call for top candidates)           | Natural, persuasive copy on top of the numeric breakdown |
+| Skill name normalization (`reactjs` → `React`)        | Deterministic alias map + AI fallback               | Keeps overlap math honest                                |
 
 AI is always additive: if the AI call fails, a templated explanation generated from the breakdown is shown instead. The demo never breaks on an AI outage.
 
@@ -88,15 +88,15 @@ Build order: design system → auth + profile → projects CRUD → matching fun
 
 ## 7. Technical risks for a live demo
 
-| Risk | Mitigation |
-| --- | --- |
-| AI call slow or failing | Timeout ~8s, fall back to template explanation; cache results in `matches` |
-| Empty database → no matches | Seed 15 diverse student profiles in the migration |
-| Skill string mismatch (`Node` vs `Node.js`) | Normalize lowercase + alias map; choose skills from a fixed picker, free text optional |
-| RLS blocking profile discovery | Explicit read policy for authenticated users, tested before demo |
-| Sign-up email confirmation blocking login | Auto-confirm enabled; keep a pre-made demo account |
-| Cold-start latency on first match | Prefetch matches in the project route loader |
-| Score all-zero edge case (no overlapping skills) | Always show top 10 with a "low fit" label rather than an empty state |
+| Risk                                             | Mitigation                                                                             |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| AI call slow or failing                          | Timeout ~8s, fall back to template explanation; cache results in `matches`             |
+| Empty database → no matches                      | Seed 15 diverse student profiles in the migration                                      |
+| Skill string mismatch (`Node` vs `Node.js`)      | Normalize lowercase + alias map; choose skills from a fixed picker, free text optional |
+| RLS blocking profile discovery                   | Explicit read policy for authenticated users, tested before demo                       |
+| Sign-up email confirmation blocking login        | Auto-confirm enabled; keep a pre-made demo account                                     |
+| Cold-start latency on first match                | Prefetch matches in the project route loader                                           |
+| Score all-zero edge case (no overlapping skills) | Always show top 10 with a "low fit" label rather than an empty state                   |
 
 ## 8. Stack
 

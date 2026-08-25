@@ -45,7 +45,56 @@ export type ScoredCandidate = {
 const AVAILABILITY_INDEX: Record<string, number> = { low: 0, medium: 1, high: 2 };
 
 const STOP_WORDS = new Set([
-  "the","and","for","with","that","this","from","have","will","need","want","into","using","use","team","project","students","student","build","building","work","working","help","make","also","some","more","than","when","them","they","their","about","over","under","across","being","been","were","what","which","while","would","could","should","there","other","each","many","must",
+  "the",
+  "and",
+  "for",
+  "with",
+  "that",
+  "this",
+  "from",
+  "have",
+  "will",
+  "need",
+  "want",
+  "into",
+  "using",
+  "use",
+  "team",
+  "project",
+  "students",
+  "student",
+  "build",
+  "building",
+  "work",
+  "working",
+  "help",
+  "make",
+  "also",
+  "some",
+  "more",
+  "than",
+  "when",
+  "them",
+  "they",
+  "their",
+  "about",
+  "over",
+  "under",
+  "across",
+  "being",
+  "been",
+  "were",
+  "what",
+  "which",
+  "while",
+  "would",
+  "could",
+  "should",
+  "there",
+  "other",
+  "each",
+  "many",
+  "must",
 ]);
 
 function lower(list: string[]): string[] {
@@ -67,7 +116,8 @@ function availabilityFit(preferred: string, candidate: string): number {
 }
 
 function experienceRelevance(project: ProjectInput, candidate: CandidateInput): number {
-  const haystack = `${candidate.experience} ${candidate.bio} ${candidate.skills.join(" ")}`.toLowerCase();
+  const haystack =
+    `${candidate.experience} ${candidate.bio} ${candidate.skills.join(" ")}`.toLowerCase();
   if (!haystack.trim()) return 0;
 
   const tokens = new Set<string>();
