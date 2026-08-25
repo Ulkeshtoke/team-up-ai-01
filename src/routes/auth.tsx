@@ -1,10 +1,28 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  Lock,
+  Mail,
+  ShieldCheck,
+  Sparkles,
+  User,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,16 +31,13 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — ProjectMatch" },
+      { title: "Sign In / Register — ProjectMatch" },
       {
         name: "description",
-        content: "Sign in or create a ProjectMatch account to build your student project team.",
+        content:
+          "Sign in or create a ProjectMatch account to build and manage student project teams.",
       },
-      { property: "og:title", content: "Sign in — ProjectMatch" },
-      {
-        property: "og:description",
-        content: "Sign in or create a ProjectMatch account to build your student project team.",
-      },
+      { property: "og:title", content: "Sign In / Register — ProjectMatch" },
     ],
   }),
   component: AuthPage,
@@ -72,14 +87,12 @@ function AuthPage() {
 
   // Listen to auth state changes and navigate to /profile once a valid session exists
   useEffect(() => {
-    // 1. Initial check for existing active session
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) {
         navigate({ to: "/profile", replace: true });
       }
     });
 
-    // 2. Reactive listener for SIGNED_IN and TOKEN_REFRESHED events
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -178,12 +191,10 @@ function AuthPage() {
           "Account created! Please check your email to confirm your account before signing in.";
         setAuthMessage(msg);
         toast.success(msg);
-        setActiveTab("signin");
-        return;
+      } else {
+        toast.success("Account created successfully!");
+        navigate({ to: "/profile", replace: true });
       }
-
-      toast.success("Welcome! Complete your profile to get matched.");
-      navigate({ to: "/profile", replace: true });
     } catch (err: unknown) {
       setBusy(false);
       const friendlyMessage = getErrorMessage(err);
@@ -193,129 +204,216 @@ function AuthPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="w-full max-w-md">
-        <Link to="/" className="mb-6 block text-center font-display text-xl font-bold">
-          ProjectMatch
+    <div className="min-h-screen bg-slate-50/60 dark:bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-6">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2.5 font-display text-xl font-bold tracking-tight text-foreground hover:opacity-90"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-700 text-white shadow-sm shadow-teal-500/20">
+            <Sparkles className="h-5 w-5" aria-hidden />
+          </div>
+          <span>
+            Project<span className="text-teal-600 dark:text-teal-400">Match</span>
+          </span>
         </Link>
-        <Card>
-          <CardHeader>
-            <CardTitle>Welcome</CardTitle>
-            <CardDescription>Use email and password to continue.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {authError && (
-              <div className="mb-4 flex items-start gap-2 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <div className="flex-1">{authError}</div>
-              </div>
-            )}
+        <p className="mt-2 text-xs sm:text-sm text-muted-foreground">
+          Algorithmic Student Team Formation & Skill Coverage
+        </p>
+      </div>
 
-            {authMessage && (
-              <div className="mb-4 flex items-start gap-2 rounded-md border border-primary/20 bg-primary/10 p-3 text-sm text-primary">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                <div className="flex-1">{authMessage}</div>
-              </div>
-            )}
-
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <Card className="border-border/80 shadow-lg shadow-slate-200/50 dark:shadow-none">
+          <CardHeader className="pb-4">
             <Tabs
               value={activeTab}
-              onValueChange={(v) => {
-                setActiveTab(v as "signin" | "signup");
+              onValueChange={(val) => {
+                setActiveTab(val as "signin" | "signup");
                 setAuthError(null);
                 setAuthMessage(null);
               }}
+              className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign in</TabsTrigger>
-                <TabsTrigger value="signup">Sign up</TabsTrigger>
+                <TabsTrigger value="signin" className="text-xs sm:text-sm font-medium">
+                  Sign In
+                </TabsTrigger>
+                <TabsTrigger value="signup" className="text-xs sm:text-sm font-medium">
+                  Create Account
+                </TabsTrigger>
               </TabsList>
+            </Tabs>
+          </CardHeader>
 
-              <TabsContent value="signin">
-                <form onSubmit={signIn} className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+          <CardContent className="space-y-4 pt-2">
+            {authError && (
+              <Alert variant="destructive" className="py-2.5 text-xs">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle className="text-xs font-semibold">Authentication Error</AlertTitle>
+                <AlertDescription className="text-xs leading-relaxed">{authError}</AlertDescription>
+              </Alert>
+            )}
+
+            {authMessage && (
+              <Alert className="border-teal-500/30 bg-teal-50/50 dark:bg-teal-950/40 text-teal-900 dark:text-teal-200 py-2.5 text-xs">
+                <CheckCircle2 className="h-4 w-4 text-teal-600" />
+                <AlertTitle className="text-xs font-semibold">Verification Required</AlertTitle>
+                <AlertDescription className="text-xs leading-relaxed">
+                  {authMessage}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {activeTab === "signin" ? (
+              <form onSubmit={signIn} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="signin-email" className="text-xs font-medium">
+                    Email Address
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="signin-email"
                       type="email"
                       required
+                      placeholder="student@university.edu"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      autoComplete="email"
-                      placeholder="student@university.edu"
+                      className="pl-9 h-10 text-sm"
+                      disabled={busy}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="signin-password" className="text-xs font-medium">
+                      Password
+                    </Label>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="signin-password"
                       type="password"
                       required
+                      placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      autoComplete="current-password"
-                      placeholder="••••••••"
+                      className="pl-9 h-10 text-sm"
+                      disabled={busy}
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={busy}>
-                    {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Sign in
-                  </Button>
-                </form>
-              </TabsContent>
+                </div>
 
-              <TabsContent value="signup">
-                <form onSubmit={signUp} className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full name</Label>
+                <Button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium h-10 shadow-xs"
+                >
+                  {busy ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Signing in…
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2">
+                      <span>Sign In</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </span>
+                  )}
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={signUp} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="signup-name" className="text-xs font-medium">
+                    Full Name
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="signup-name"
+                      type="text"
                       required
+                      placeholder="Jane Doe"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      autoComplete="name"
-                      placeholder="Alex Chen"
+                      className="pl-9 h-10 text-sm"
+                      disabled={busy}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="signup-email" className="text-xs font-medium">
+                    University / Personal Email
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="signup-email"
                       type="email"
                       required
+                      placeholder="jane@university.edu"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      autoComplete="email"
-                      placeholder="student@university.edu"
+                      className="pl-9 h-10 text-sm"
+                      disabled={busy}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="signup-password" className="text-xs font-medium">
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="signup-password"
                       type="password"
                       required
                       minLength={6}
+                      placeholder="Minimum 6 characters"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      autoComplete="new-password"
-                      placeholder="At least 6 characters"
+                      className="pl-9 h-10 text-sm"
+                      disabled={busy}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Use a strong password (minimum 6 characters).
-                    </p>
                   </div>
-                  <Button type="submit" className="w-full" disabled={busy}>
-                    {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Create account
-                  </Button>
-                  <p className="text-center text-xs text-muted-foreground">
-                    Next step: complete your student profile.
+                  <p className="text-[11px] text-muted-foreground">
+                    Must be at least 6 characters with letters and numbers.
                   </p>
-                </form>
-              </TabsContent>
-            </Tabs>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium h-10 shadow-xs"
+                >
+                  {busy ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Creating account…
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2">
+                      <span>Create Account</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </span>
+                  )}
+                </Button>
+              </form>
+            )}
           </CardContent>
+
+          <CardFooter className="border-t border-border/60 bg-muted/20 py-3 text-center text-xs text-muted-foreground flex justify-center">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="h-4 w-4 text-teal-600" />
+              <span>Protected with secure Supabase Auth & RLS</span>
+            </div>
+          </CardFooter>
         </Card>
       </div>
     </div>

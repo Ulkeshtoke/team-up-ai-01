@@ -1,11 +1,23 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  Briefcase,
+  CheckCircle2,
+  Clock,
+  FolderPlus,
+  Info,
+  Loader2,
+  Sparkles,
+  Users,
+  Wand2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { ChipPicker } from "@/components/ChipPicker";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,10 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { suggestSkills } from "@/lib/matchmaking.functions";
-import { fetchMyProfile } from "@/lib/queries";
 import {
   AVAILABILITY_LABEL,
   AVAILABILITY_LEVELS,
@@ -35,10 +47,10 @@ import {
 export const Route = createFileRoute("/_authenticated/projects/new")({
   head: () => ({
     meta: [
-      { title: "Create Project — ProjectMatch" },
+      { title: "Create New Project — ProjectMatch" },
       {
         name: "description",
-        content: "Create a new project brief to discover matched team candidates.",
+        content: "Draft a new project brief to discover matched candidate teammates.",
       },
     ],
   }),
@@ -141,25 +153,21 @@ function CreateProjectPage() {
         .single();
 
       if (projectError) throw new Error(projectError.message);
-      if (!project) throw new Error("Failed to create project");
 
-      // Attempt to auto-add owner as project lead in project_members if profile exists
-      try {
-        const myProfile = await fetchMyProfile(user.id);
-        if (myProfile?.id) {
-          await supabase.from("project_members").insert({
-            project_id: project.id,
-            profile_id: myProfile.id,
-            role: "Project Lead",
-            status: "accepted",
-          });
-        }
-      } catch (err) {
-        console.warn("Could not auto-add owner to project_members:", err);
+      // Auto-add the creator as the first team member (Lead)
+      const { error: memberError } = await supabase.from("project_members").insert({
+        project_id: project.id,
+        profile_id: user.id,
+        role: "Project Lead",
+        status: "accepted",
+      });
+
+      if (memberError && !memberError.message.includes("foreign key")) {
+        console.warn("Could not auto-add owner as member:", memberError);
       }
 
       await queryClient.invalidateQueries({ queryKey: ["projects", user.id] });
-      toast.success("Project created successfully!");
+      toast.success("Project created! Now let's find matching candidates.");
       navigate({ to: "/projects/$id", params: { id: project.id } });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create project";
@@ -170,177 +178,263 @@ function CreateProjectPage() {
   };
 
   return (
-    <AppShell>
-      <div className="mb-6">
-        <Link
-          to="/projects"
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to Projects
-        </Link>
-        <h1 className="text-3xl font-bold tracking-tight">Create New Project</h1>
-        <p className="mt-1 text-muted-foreground text-sm">
-          Define your project scope, target skills, and ideal team capacity to compute candidate
-          compatibility.
-        </p>
+    <AppShell
+      breadcrumbs={[{ label: "Projects", href: "/projects" }, { label: "Create New Project" }]}
+    >
+      {/* Header */}
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/70 pb-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground font-display">
+              Create Project Brief
+            </h1>
+            <Badge
+              variant="secondary"
+              className="bg-teal-50 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-500/20 text-xs font-semibold"
+            >
+              Team Matching Ready
+            </Badge>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Define your project scope and technical requirements to calculate candidate match
+            compatibility.
+          </p>
+        </div>
+
+        <Button asChild variant="outline" size="sm" className="gap-1.5 self-start sm:self-auto">
+          <Link to="/projects">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Projects</span>
+          </Link>
+        </Button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Project Overview</CardTitle>
-            <CardDescription>
-              Basic information about the initiative or hackathon build.
-            </CardDescription>
+      <form onSubmit={handleSubmit} className="space-y-8 max-w-4xl">
+        {/* Section 1: Overview & Scope */}
+        <Card className="border-border/80 shadow-xs">
+          <CardHeader className="border-b border-border/60 pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-foreground">
+                <Briefcase className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold">1. Project Overview & Scope</CardTitle>
+                <CardDescription className="text-xs">
+                  Basic title, category, and functional description of what your team will build.
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="project-name">Project Title *</Label>
-              <Input
-                id="project-name"
-                required
-                placeholder="e.g. AI Emergency Triage Assistant, Autonomous Drone Delivery"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+
+          <CardContent className="space-y-4 pt-5">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label htmlFor="proj-name" className="text-xs font-medium">
+                  Project Title <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="proj-name"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. AI-Powered Medical Image Triage"
+                  className="h-10 text-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="proj-category" className="text-xs font-medium">
+                  Category / Context
+                </Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger id="proj-category" className="h-10 text-sm">
+                    <SelectValue placeholder="Select context" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROJECT_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="project-category">Category</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger id="project-category">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROJECT_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="project-description">Project Description</Label>
+                <Label htmlFor="proj-desc" className="text-xs font-medium">
+                  Project Description
+                </Label>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={handleExtractSkills}
                   disabled={extracting || !description.trim()}
-                  className="gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5"
+                  className="h-7 px-2.5 text-xs text-teal-700 dark:text-teal-300 border-teal-500/30 hover:bg-teal-50 dark:hover:bg-teal-950/50 gap-1.5"
                 >
                   {extracting ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    <Wand2 className="h-3.5 w-3.5" />
                   )}
-                  Extract Skills with AI
+                  <span>Auto-Extract Skills</span>
                 </Button>
               </div>
               <Textarea
-                id="project-description"
+                id="proj-desc"
                 rows={4}
-                placeholder="Describe what you are building, the architecture, problem statement, and what kind of technical expertise is needed..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe what your team is building, target technologies (e.g. Next.js, FastAPI, PyTorch), and specific goals…"
+                className="text-sm leading-relaxed"
               />
               <p className="text-[11px] text-muted-foreground">
-                Tip: Click "Extract Skills with AI" to automatically suggest required skills from
-                your text.
+                Tip: Mentioning frameworks and technologies allows the Auto-Extract button to
+                populate required skills automatically.
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Required Skills & Desired Interests</CardTitle>
-            <CardDescription>
-              Matching algorithm computes 45% weight on skill overlap and 10% on shared domain
-              interests.
-            </CardDescription>
+        {/* Section 2: Team Capacity & Workload */}
+        <Card className="border-border/80 shadow-xs">
+          <CardHeader className="border-b border-border/60 pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-foreground">
+                <Users className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold">
+                  2. Team Capacity & Availability Preferences
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Set target roster size and expected weekly time commitment.
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-8">
+
+          <CardContent className="space-y-6 pt-5">
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-2.5 rounded-xl border border-border/70 bg-muted/20 p-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium">Target Team Size</Label>
+                  <span className="rounded-md bg-teal-50 dark:bg-teal-950/60 px-2.5 py-0.5 text-xs font-bold text-teal-800 dark:text-teal-300 border border-teal-500/20">
+                    {teamSize} members
+                  </span>
+                </div>
+                <Slider
+                  value={[teamSize]}
+                  onValueChange={([val]) => setTeamSize(val ?? 4)}
+                  min={2}
+                  max={8}
+                  step={1}
+                  className="py-2"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+                  <span>2 (Duo)</span>
+                  <span>4 (Standard)</span>
+                  <span>8 (Squad)</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">Preferred Candidate Availability</Label>
+                <Select value={preferredAvailability} onValueChange={setPreferredAvailability}>
+                  <SelectTrigger className="h-10 text-sm">
+                    <SelectValue placeholder="Select commitment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AVAILABILITY_LEVELS.map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {AVAILABILITY_LABEL[level]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Candidates with matching availability receive up to +20% score boost.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Section 3: Skill Requirements & Domain Interests */}
+        <Card className="border-border/80 shadow-xs">
+          <CardHeader className="border-b border-border/60 pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-foreground">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold">
+                  3. Required Skills & Preferred Interests
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Skills carry a 45% weight in candidate compatibility scoring. At least 1 required
+                  skill is required.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-6 pt-5">
             <ChipPicker
-              label="Required Skills *"
+              label="Required Skills (45% Weight)"
+              helpText="Select critical engineering, design, or domain proficiencies required for your project."
               options={SKILL_OPTIONS}
               value={requiredSkills}
               onChange={setRequiredSkills}
               normalize={normalizeSkill}
-              helpText="Select skills that candidates must have. Candidate scoring directly checks this set."
+              placeholder="Search skills (e.g. React, Python, PostgreSQL, Figma)…"
             />
-            <ChipPicker
-              label="Preferred Domain Interests"
-              options={INTEREST_OPTIONS}
-              value={preferredInterests}
-              onChange={setPreferredInterests}
-              normalize={normalizeInterest}
-              helpText="Candidates sharing these interests receive an interest alignment score boost."
-            />
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Team Scope & Availability</CardTitle>
-            <CardDescription>
-              Set the target roster size and weekly commitment level.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="team-size">Target Team Size</Label>
-              <Input
-                id="team-size"
-                type="number"
-                min={2}
-                max={10}
-                value={teamSize}
-                onChange={(e) =>
-                  setTeamSize(Math.max(2, Math.min(10, Number(e.target.value) || 2)))
-                }
+            <div className="border-t border-border/60 pt-4">
+              <ChipPicker
+                label="Preferred Interests & Topics (10% Weight)"
+                helpText="Optional domain topics that increase candidate alignment scores."
+                options={INTEREST_OPTIONS}
+                value={preferredInterests}
+                onChange={setPreferredInterests}
+                normalize={normalizeInterest}
+                placeholder="Search interests (e.g. AI & ML, Healthcare, Web3, FinTech)…"
               />
-              <p className="text-[11px] text-muted-foreground">
-                Total members including the project lead (2–10).
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="preferred-availability">Preferred Availability</Label>
-              <Select value={preferredAvailability} onValueChange={setPreferredAvailability}>
-                <SelectTrigger id="preferred-availability">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {AVAILABILITY_LEVELS.map((level) => (
-                    <SelectItem key={level} value={level}>
-                      {AVAILABILITY_LABEL[level]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] text-muted-foreground">
-                Used to score candidate availability compatibility (20% weight).
-              </p>
             </div>
           </CardContent>
         </Card>
 
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <Button type="button" variant="ghost" asChild>
-            <Link to="/projects">Cancel</Link>
-          </Button>
-          <Button type="submit" size="lg" disabled={submitting} className="gap-2">
-            {submitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-            Create Project & Find Matches
-          </Button>
+        {/* Sticky Form Action Footer */}
+        <div className="sticky bottom-4 z-20 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-border/80 bg-background/95 p-4 shadow-lg backdrop-blur-md">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Info className="h-4 w-4 text-teal-600" />
+            <span>
+              {requiredSkills.length === 0
+                ? "Add at least 1 required skill to enable algorithmic matching."
+                : `Ready to match candidates across ${requiredSkills.length} required skills.`}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-initial">
+              <Link to="/projects">Cancel</Link>
+            </Button>
+            <Button
+              type="submit"
+              disabled={submitting || requiredSkills.length === 0}
+              size="sm"
+              className="bg-teal-600 hover:bg-teal-700 text-white font-medium gap-1.5 shadow-xs flex-1 sm:flex-initial"
+            >
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FolderPlus className="h-4 w-4" />
+              )}
+              <span>Create Project & Find Matches</span>
+            </Button>
+          </div>
         </div>
       </form>
     </AppShell>
